@@ -75,6 +75,7 @@ public class Client extends JFrame {
 	
 	
 	public Client(InetAddress ip, DatagramSocket socket, String username) {
+		setResizable(false);
 		
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
