@@ -60,6 +60,17 @@ public class Login extends JFrame {
 			loginSuccessful = openConnection(txtIpaddress.getText(), Integer.decode(txtPort.getText()));
 			if (loginSuccessful){
 				//TODO login to main gui component sending arguments txtUsername, IPAddress, socket
+				dispose();
+				EventQueue.invokeLater(new Runnable() {
+					public void run() {
+						try {
+							Client frame = new Client(IPAddress, socket, txtUsername.getText());
+							frame.setVisible(true);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				});
 			}
 			else{
 				lblError.setText("Error: Connection could not be established");
