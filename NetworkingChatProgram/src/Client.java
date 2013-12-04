@@ -1,6 +1,9 @@
-import java.awt.BorderLayout;
 import java.awt.EventQueue;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -23,6 +26,8 @@ import java.awt.event.KeyEvent;
 
 import org.eclipse.wb.swing.FocusTraversalOnArray;
 
+import ServerSide.User;
+
 import java.awt.Component;
 
 
@@ -35,20 +40,51 @@ public class Client extends JFrame {
 	private JTextField textChatField;
 	private JTextArea textHistory;
 	private DefaultCaret caret;
+	private int serverPort;
+	private User user;
+	private int userPort;
+	private boolean running;
+
+	/*
+	 * Creates a user object, converts it to a byte array and sends it to the Server. This allows the server to
+	 * determine when individual users have logged in to the client.
+	 */
+	private void login(){
+		
+		user = new User(this.userName, this.IPAddress, this.userPort);
+		ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+		ObjectOutput output = null;
+		
+		try {
+			output = new ObjectOutputStream(outStream);
+			output.writeObject(user);
+			byte[] objectData = outStream.toByteArray();
+			outStream.close();
+			output.close();
+			
+			DatagramPacket packet = new DatagramPacket(objectData, objectData.length, IPAddress, 8913);
+			socket.send(packet);
+			
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+	
 	
 	private void postToConsole(String message){	
+		
 		textHistory.append(message+"\n");
 		textHistory.setCaretPosition(textHistory.getDocument().getLength());
 	}
 	
 	private void post(String message){
-		
-		postToConsole(userName+": "+message);
+		postToServer(userName+": "+message);
 		textChatField.setText("");
 		textChatField.requestFocusInWindow();
 	}
 	
-	private String receive(){
+	private void receive(){
 		
 		byte[] payload = new byte[1024];
 		DatagramPacket udpPacket = new DatagramPacket(payload, payload.length);
@@ -58,13 +94,13 @@ public class Client extends JFrame {
 			e.printStackTrace();
 			System.out.println(e.getMessage());
 		}
-		return new String(udpPacket.getData());
+		postToConsole(new String(udpPacket.getData()));
 	}
 	
 	private void postToServer(String message){
 		
 		byte[] payload = message.getBytes();
-		DatagramPacket udpPacket = new DatagramPacket(payload, payload.length, IPAddress, socket.getPort());
+		DatagramPacket udpPacket = new DatagramPacket(payload, payload.length, IPAddress, serverPort);
 		try {
 			socket.send(udpPacket);
 		} catch (IOException e) {
@@ -74,7 +110,24 @@ public class Client extends JFrame {
 	}
 	
 	
-	public Client(InetAddress ip, DatagramSocket socket, String username) {
+	/*
+	 * Thread listens for new messages from the server and posts them to the textpane in the GUI
+	 */
+	private void listen(){
+		Thread thread = new Thread("Listen"){
+			public void run(){
+				
+				running = true;
+				
+				while(running){
+					receive();
+				}}
+		};
+		thread.start();
+		
+	}
+	
+	public Client(InetAddress ip, DatagramSocket socket, String username, int port, int userPort) {
 		setResizable(false);
 		
 		try {
@@ -89,6 +142,8 @@ public class Client extends JFrame {
 		this.IPAddress = ip;
 		this.socket = socket;
 		this.userName = username;
+		this.serverPort = port;
+		this.userPort = userPort;
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 800, 500);
 		contentPane = new JPanel();
@@ -131,6 +186,10 @@ public class Client extends JFrame {
 				}
 			}
 		});
+		login();
+		listen();
 		textChatField.requestFocusInWindow();
+		
+		
 	}
 }

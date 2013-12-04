@@ -32,12 +32,14 @@ public class Login extends JFrame {
 	private JLabel lblError;
 	private InetAddress IPAddress;
 	private DatagramSocket socket;
+	private int userPort;
 	
-	private boolean openConnection(String ipAddress, int port){
+	private boolean openConnection(String ipAddress){
 		
 		try {
 			IPAddress = InetAddress.getByName(ipAddress);
-			socket = new DatagramSocket(port);
+			socket = new DatagramSocket();
+			userPort = socket.getLocalPort();
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.out.println(e.getMessage());
@@ -57,14 +59,15 @@ public class Login extends JFrame {
 		}
 		else{
 			loginSuccessful = false;
-			loginSuccessful = openConnection(txtIpaddress.getText(), Integer.decode(txtPort.getText()));
+			loginSuccessful = openConnection(txtIpaddress.getText());
 			if (loginSuccessful){
-				//TODO login to main gui component sending arguments txtUsername, IPAddress, socket
+				//TODO login to main GUI component sending arguments txtUsername, IPAddress, socket
+				this.port = Integer.decode(txtPort.getText());
 				dispose();
 				EventQueue.invokeLater(new Runnable() {
 					public void run() {
 						try {
-							Client frame = new Client(IPAddress, socket, txtUsername.getText());
+							Client frame = new Client(IPAddress, socket, txtUsername.getText(), port, userPort);
 							frame.setVisible(true);
 						} catch (Exception e) {
 							e.printStackTrace();
