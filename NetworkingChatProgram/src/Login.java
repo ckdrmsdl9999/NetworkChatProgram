@@ -33,6 +33,7 @@ public class Login extends JFrame {
 	private InetAddress IPAddress;
 	private DatagramSocket socket;
 	private int userPort;
+	private InetAddress userIP;
 	
 	private boolean openConnection(String ipAddress){
 		
@@ -40,6 +41,9 @@ public class Login extends JFrame {
 			IPAddress = InetAddress.getByName(ipAddress);
 			socket = new DatagramSocket();
 			userPort = socket.getLocalPort();
+			userIP = InetAddress.getLocalHost();
+			//DEBUG
+			System.out.println(userIP.getHostAddress());
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.out.println(e.getMessage());
@@ -67,7 +71,7 @@ public class Login extends JFrame {
 				EventQueue.invokeLater(new Runnable() {
 					public void run() {
 						try {
-							Client frame = new Client(IPAddress, socket, txtUsername.getText(), port, userPort);
+							Client frame = new Client(IPAddress, socket, txtUsername.getText(), port, userPort, userIP);
 							frame.setVisible(true);
 						} catch (Exception e) {
 							e.printStackTrace();
