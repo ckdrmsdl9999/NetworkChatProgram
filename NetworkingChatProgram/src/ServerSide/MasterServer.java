@@ -15,11 +15,14 @@ public class MasterServer {
 	
 	public static void main(String[] args) {
 		
-		if (args.length != 1){
-			System.out.println("Error: only accepts one port number parameter");
+		if (args.length == 0){
+			System.out.println("Error: only accepts at least one port number parameter");
 		}
 		else{
-			new MasterServer(Integer.decode(args[0]));
+			for (int i = 0; i < args.length; i++){
+				new MasterServer(Integer.decode(args[0]));
+			}
+			
 		}
 		
 	}
