@@ -7,6 +7,7 @@ import java.io.Serializable;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -44,6 +45,8 @@ public class Client extends JFrame {
 	private User user;
 	private int userPort;
 	private boolean running;
+	private InetAddress userIP;
+	private DatagramSocket aliveListener;
 
 	/*
 	 * Creates a user object, converts it to a byte array and sends it to the Server. This allows the server to
@@ -51,7 +54,7 @@ public class Client extends JFrame {
 	 */
 	private void login(){
 		
-		user = new User(this.userName, this.IPAddress, this.userPort);
+		user = new User(this.userName, this.userIP, this.userPort);
 		ByteArrayOutputStream outStream = new ByteArrayOutputStream();
 		ObjectOutput output = null;
 		
@@ -109,6 +112,40 @@ public class Client extends JFrame {
 		}
 	}
 	
+	/*
+	 * Responds to server inquiries to ensure server remains aware of client.
+	 */
+	private void isAlive(){
+		Thread thread = new Thread("isAlive"){
+			public void run(){
+				
+				try {
+					aliveListener = new DatagramSocket(userPort+1); // Listens on current user port + 1.
+				} catch (SocketException e) {
+					System.out.println(e.getMessage());
+					e.printStackTrace();
+				}
+				
+				while (running){
+					
+					byte[] payload = new byte[1024];
+					DatagramPacket alivePacket = new DatagramPacket(payload, payload.length);
+					try {
+						aliveListener.receive(alivePacket);
+						alivePacket = new DatagramPacket(payload, payload.length, alivePacket.getAddress(), alivePacket.getPort());
+						aliveListener.send(alivePacket);
+					} catch (IOException e) {
+						System.out.println(e.getMessage());
+						e.printStackTrace();
+					}
+					
+					
+				}
+			}
+		};
+		thread.start();
+		
+	}
 	
 	/*
 	 * Thread listens for new messages from the server and posts them to the textpane in the GUI
@@ -127,7 +164,7 @@ public class Client extends JFrame {
 		
 	}
 	
-	public Client(InetAddress ip, DatagramSocket socket, String username, int port, int userPort) {
+	public Client(InetAddress ip, DatagramSocket socket, String username, int port, int userPort, InetAddress userIP) {
 		setResizable(false);
 		
 		try {
@@ -144,6 +181,7 @@ public class Client extends JFrame {
 		this.userName = username;
 		this.serverPort = port;
 		this.userPort = userPort;
+		this.userIP = userIP;
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 800, 500);
 		contentPane = new JPanel();
@@ -188,6 +226,7 @@ public class Client extends JFrame {
 		});
 		login();
 		listen();
+		isAlive();
 		textChatField.requestFocusInWindow();
 		
 		
