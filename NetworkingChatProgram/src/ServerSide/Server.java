@@ -50,9 +50,10 @@ public class Server implements Runnable{
 					System.out.println(e1.getMessage());
 					e1.printStackTrace();
 				}
-				
+											
 				while (ServerRunning){
 
+					int timesFailed = 0;
 					// Delay the thread by 2 seconds per cycle to ameliorate network congestion.
 					try {
 						Thread.sleep(2000);
@@ -69,11 +70,17 @@ public class Server implements Runnable{
 							payload = new byte[1024];
 							packet = new DatagramPacket(payload, payload.length);
 							udpPing.setSoTimeout(3000); // Will throw a SocketTimeoutException if the socket does not receive a packet within 3 seconds.
-							udpPing.receive(packet);
+							udpPing.receive(packet);	
 						} catch (SocketTimeoutException e) {
-							System.out.println(e.getMessage());
-							System.out.println(userList.get(i).getUserName()+" has disconnected");
-							userList.remove(i);
+							
+							// Will allow no reply from client 5 times before evicting them from the client list to ameliorate errors from packet loss via UDP.
+							timesFailed += 1;
+							if (timesFailed > 4){
+								System.out.println(e.getMessage());
+								System.out.println(userList.get(i).getUserName()+" has disconnected");
+								userList.remove(i);
+								timesFailed = 0;
+							}
 						} catch (Exception e1){
 							System.out.println(e1.getMessage());
 							e1.printStackTrace();
