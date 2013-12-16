@@ -40,13 +40,13 @@ public class Client extends JFrame {
 	private String userName;
 	private JTextField textChatField;
 	private JTextArea textHistory;
-	private DefaultCaret caret;
 	private int serverPort;
 	private User user;
 	private int userPort;
 	private boolean running;
 	private InetAddress userIP;
 	private DatagramSocket aliveListener;
+	private String uniqueID;
 
 	/*
 	 * Creates a user object, converts it to a byte array and sends it to the Server. This allows the server to
@@ -65,7 +65,7 @@ public class Client extends JFrame {
 			outStream.close();
 			output.close();
 			
-			DatagramPacket packet = new DatagramPacket(objectData, objectData.length, IPAddress, 8913);
+			DatagramPacket packet = new DatagramPacket(objectData, objectData.length, IPAddress, serverPort+1);
 			socket.send(packet);
 			
 		} catch (Exception e) {
@@ -97,7 +97,15 @@ public class Client extends JFrame {
 			e.printStackTrace();
 			System.out.println(e.getMessage());
 		}
-		postToConsole(new String(udpPacket.getData()));
+		String receivedMessage = new String(udpPacket.getData());
+		if (receivedMessage.substring(0, 3).equals("txt")){
+			postToConsole(receivedMessage.substring(3, receivedMessage.length()));
+		}
+		else if (receivedMessage.substring(0, 3).equals("uid")){
+			uniqueID = receivedMessage.substring(3, receivedMessage.length());
+			System.out.println("received unique ID from server :"+getUniqueID());
+		}
+		
 	}
 	
 	private void postToServer(String message){
@@ -110,6 +118,10 @@ public class Client extends JFrame {
 			e.printStackTrace();
 			System.out.println(e.getMessage());
 		}
+	}
+	
+	private String getUniqueID(){
+		return this.uniqueID;
 	}
 	
 	/*
@@ -127,12 +139,13 @@ public class Client extends JFrame {
 				}
 				
 				while (running){
-					
+										
 					byte[] payload = new byte[1024];
 					DatagramPacket alivePacket = new DatagramPacket(payload, payload.length);
 					try {
 						aliveListener.receive(alivePacket);
-						alivePacket = new DatagramPacket(payload, payload.length, alivePacket.getAddress(), alivePacket.getPort());
+						String ack = "uid" + getUniqueID();
+						alivePacket = new DatagramPacket(ack.getBytes(), ack.getBytes().length, alivePacket.getAddress(), alivePacket.getPort());
 						aliveListener.send(alivePacket);
 					} catch (IOException e) {
 						System.out.println(e.getMessage());
@@ -174,14 +187,14 @@ public class Client extends JFrame {
 			e.printStackTrace();
 			System.out.println(e.getMessage());
 		}
-		
-		
+
 		this.IPAddress = ip;
 		this.socket = socket;
 		this.userName = username;
 		this.serverPort = port;
 		this.userPort = userPort;
 		this.userIP = userIP;
+		this.uniqueID = "";
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 800, 500);
 		contentPane = new JPanel();
