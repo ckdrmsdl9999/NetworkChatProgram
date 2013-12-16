@@ -15,6 +15,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
@@ -34,6 +35,7 @@ public class Login extends JFrame {
 	private DatagramSocket socket;
 	private int userPort;
 	private InetAddress userIP;
+	private String errorMsg;
 	
 	private boolean openConnection(String ipAddress){
 		
@@ -42,11 +44,22 @@ public class Login extends JFrame {
 			socket = new DatagramSocket();
 			userPort = socket.getLocalPort();
 			userIP = InetAddress.getLocalHost();
-			//DEBUG
-			System.out.println(userIP.getHostAddress());
+			byte[] payload = new String("chk"+txtUsername.getText()).getBytes();
+			DatagramPacket packet = new DatagramPacket(payload, payload.length, IPAddress, port);
+			socket.send(packet);
+			socket.setSoTimeout(10000);
+			payload = new byte[1024];
+			packet = new DatagramPacket(payload, payload.length);
+			socket.receive(packet);
+			socket.setSoTimeout(0);
+			boolean response = packet.getData()[0]!=0; // convert byte[] into boolean value.	
+			if (!response){
+				errorMsg = "Username already taken";
+				return false;
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			System.out.println(e.getMessage());
+			errorMsg = e.getMessage();
 			return false;
 		} 
 		
@@ -56,17 +69,20 @@ public class Login extends JFrame {
 
 	
 	private void userLogin(){
+		errorMsg = "";
 		lblError.setText("");
 		if (txtUsername.getText().length() == 0 || txtIpaddress.getText().length() == 0 || txtPort.getText().length() == 0){
-			lblError.setText("Error: Figures you have entered are invalid");
+			errorMsg = "Error: Figures you have entered are invalid";
+			lblError.setText(errorMsg);
 			return;
 		}
 		else{
 			loginSuccessful = false;
+			this.port = Integer.decode(txtPort.getText());
 			loginSuccessful = openConnection(txtIpaddress.getText());
 			if (loginSuccessful){
 				//TODO login to main GUI component sending arguments txtUsername, IPAddress, socket
-				this.port = Integer.decode(txtPort.getText());
+				
 				dispose();
 				EventQueue.invokeLater(new Runnable() {
 					public void run() {
@@ -80,7 +96,7 @@ public class Login extends JFrame {
 				});
 			}
 			else{
-				lblError.setText("Error: Connection could not be established");
+				lblError.setText(errorMsg);
 				return;
 			}
 		}
