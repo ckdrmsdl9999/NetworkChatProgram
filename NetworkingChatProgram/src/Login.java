@@ -59,7 +59,7 @@ public class Login extends JFrame {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			errorMsg = e.getMessage();
+			errorMsg = "Error: "+e.getMessage();
 			return false;
 		} 
 		
@@ -70,7 +70,6 @@ public class Login extends JFrame {
 	
 	private void userLogin(){
 		errorMsg = "";
-		lblError.setText("");
 		if (txtUsername.getText().length() == 0 || txtIpaddress.getText().length() == 0 || txtPort.getText().length() == 0){
 			errorMsg = "Error: Figures you have entered are invalid";
 			lblError.setText(errorMsg);
@@ -81,8 +80,7 @@ public class Login extends JFrame {
 			this.port = Integer.decode(txtPort.getText());
 			loginSuccessful = openConnection(txtIpaddress.getText());
 			if (loginSuccessful){
-				//TODO login to main GUI component sending arguments txtUsername, IPAddress, socket
-				
+								
 				dispose();
 				EventQueue.invokeLater(new Runnable() {
 					public void run() {

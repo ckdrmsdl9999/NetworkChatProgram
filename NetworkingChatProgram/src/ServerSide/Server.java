@@ -1,8 +1,11 @@
 package ServerSide;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
@@ -16,7 +19,7 @@ public class Server implements Runnable{
 
 	private int port;
 	private DatagramSocket socket, sendSocket;
-	private Thread run, users, listen, check;
+	private Thread run, users, listen, check, userListSend;
 	private boolean ServerRunning;
 	private ArrayList<User> userList;
 	private ObjectInputStream inStream;
@@ -84,13 +87,13 @@ public class Server implements Runnable{
 							
 							// Will allow no reply from client 5 times before evicting them from the client list to ameliorate errors from packet loss via UDP.
 							userList.get(i).setPingsFailed(userList.get(i).getPingsFailed()+1);
-							System.out.println("Exception thrown waiting for "+userList.get(i).getUserName());
+							System.out.println("\nNo repsonse from "+userList.get(i).getUserName());
 							if (userList.get(i).getPingsFailed() > 4 && userList.get(i).active){
 								System.out.println("\n"+e.getMessage());
 								System.out.println(userList.get(i).getUserName()+" has disconnected"+"\n");
 								sendToClients(userList.get(i).getUserName()+" has disconnected");
 								userList.get(i).setActive(false);
-								userList.get(i).setPingsFailed(0);								
+								userList.get(i).setPingsFailed(0);
 								break;
 							}
 							// counts how many times the User instance has been attempted to contact.
@@ -232,6 +235,84 @@ public class Server implements Runnable{
 		}
 	}
 
+	private void sentToClientsUserlist(){
+		userListSend = new Thread("userListSend"){
+			public void run(){
+				DatagramSocket userListSocket = null; // had to initialise to null to prevent uninitialised error below.
+				try {
+					userListSocket = new DatagramSocket();
+				} catch (SocketException e1) {
+					System.out.println(e1.getMessage());
+					e1.printStackTrace();
+				}
+
+				while(ServerRunning){
+
+					// sleep for 2 seconds per cycle
+					try {
+						Thread.sleep(2000);
+					} catch (InterruptedException e) {
+						System.out.println(e.getMessage());
+						e.printStackTrace();
+					}
+
+					ArrayList<String> usernames = new ArrayList<String>();
+					
+					// all user's usernames are stored in a new arraylist as strings.
+					for (int i = 0; i < userList.size(); i++){
+
+						if (userList.get(i).isActive()){
+						usernames.add(userList.get(i).getUserName());}					
+					}
+	
+					ByteArrayOutputStream outstream = new ByteArrayOutputStream();
+					ObjectOutputStream objOutstream;
+					try {
+						objOutstream = new ObjectOutputStream(outstream);
+						objOutstream.writeObject(usernames);
+						
+						
+						
+						byte[] string = "uli".getBytes(); //string prefix so the client can identify the message type. "uli" = userlist
+						byte[] tempArray = outstream.toByteArray(); // stores the object usernames as a byte array to be sent.
+						byte[] payload = new byte[string.length+tempArray.length]; // empty byte array sized to fit string + usernames object
+						
+						// loop fills the byte array with the string and the object data.
+						for (int i = 0; i < payload.length; i++){
+							if (i < 3){
+								payload[i] = string[i];
+							}
+							else{
+								payload[i] = tempArray[i-3];
+							}
+						}
+						
+						
+						// iterates though all connected users and sends them their individual packet.
+						for (int i = 0; i < userList.size(); i++){
+
+							DatagramPacket packet = new DatagramPacket(payload, payload.length, userList.get(i).getIp(), userList.get(i).getPort());
+							try {
+								userListSocket.send(packet);
+							} catch (IOException e) {
+								System.out.println(e.getMessage());
+								e.printStackTrace();
+							}
+						}
+						objOutstream.close();
+						outstream.close();					
+					} catch (Exception e) {
+						System.out.println(e.getMessage());
+						e.printStackTrace();
+					}
+
+
+
+				}}
+		};
+		userListSend.start();
+	}
+	
 	/*
 	 * Listens for new message transmissions from clients
 	 */
@@ -314,6 +395,7 @@ public class Server implements Runnable{
 		manageUsers();
 		listen();
 		checkWhoIsStillAlive();
+		sentToClientsUserlist();
 	}
 
 

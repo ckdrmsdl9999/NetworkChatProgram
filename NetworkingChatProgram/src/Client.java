@@ -1,6 +1,8 @@
 import java.awt.EventQueue;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -8,6 +10,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.ArrayList;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -31,6 +34,11 @@ import ServerSide.User;
 
 import java.awt.Component;
 
+import javax.swing.JLabel;
+
+import java.awt.SystemColor;
+import java.awt.Font;
+
 
 public class Client extends JFrame {
 
@@ -47,6 +55,9 @@ public class Client extends JFrame {
 	private InetAddress userIP;
 	private DatagramSocket aliveListener;
 	private String uniqueID;
+	private JLabel lblConUsers;
+	private ArrayList<String> usersList;
+	private JTextArea connectedUserTxt;
 
 	/*
 	 * Creates a user object, converts it to a byte array and sends it to the Server. This allows the server to
@@ -97,14 +108,55 @@ public class Client extends JFrame {
 			e.printStackTrace();
 			System.out.println(e.getMessage());
 		}
-		String receivedMessage = new String(udpPacket.getData());
+		byte[] data = udpPacket.getData();
+		String receivedMessage = new String(data);
+		receivedMessage = receivedMessage.trim();
+		
+		// Received string is a text communication for user.
 		if (receivedMessage.substring(0, 3).equals("txt")){
 			postToConsole(receivedMessage.substring(3, receivedMessage.length()));
 		}
+		
+		// Received string is a identifier for client.
 		else if (receivedMessage.substring(0, 3).equals("uid")){
 			uniqueID = receivedMessage.substring(3, receivedMessage.length());
 			System.out.println("received unique ID from server :"+getUniqueID());
 		}
+		
+		// Received string is actually data for the client userlist.
+		else if (receivedMessage.substring(0, 3).equals("uli")){
+			populateUserList(data);
+		}
+		
+	}
+	
+	private void populateUserList(byte[] data){
+		
+		int stringArrayLength = "uli".getBytes().length;
+		byte[] objectData = new byte[data.length - stringArrayLength];
+		int incrementCounter = 0;
+		for (int i = stringArrayLength; i < data.length; i++){
+			//TODO remove 3 char string from array
+			objectData[incrementCounter++] = data[i];
+		}
+		
+		
+		
+		ByteArrayInputStream byteStream = new ByteArrayInputStream(objectData);
+		try {
+			ObjectInputStream instream = new ObjectInputStream(byteStream);
+			usersList = (ArrayList<String>) instream.readObject();
+			connectedUserTxt.setText(null);
+			for (int i = 0; i < usersList.size(); i++){
+				connectedUserTxt.append(usersList.get(i)+"\n");
+			}
+			
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+		
+		
 		
 	}
 	
@@ -195,8 +247,9 @@ public class Client extends JFrame {
 		this.userPort = userPort;
 		this.userIP = userIP;
 		this.uniqueID = "";
+		usersList = new ArrayList<String>();
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 800, 500);
+		setBounds(100, 100, 1000, 500);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -207,6 +260,8 @@ public class Client extends JFrame {
 		contentPane.add(scrollPane);
 		
 		textHistory = new JTextArea();
+		textHistory.setWrapStyleWord(true);
+		textHistory.setLineWrap(true);
 		textHistory.setEditable(false);
 		scrollPane.setViewportView(textHistory);
 		textHistory.setColumns(10);
@@ -226,6 +281,19 @@ public class Client extends JFrame {
 		textChatField.setBounds(10, 426, 651, 23);
 		contentPane.add(textChatField);
 		textChatField.setColumns(10);
+		
+		connectedUserTxt = new JTextArea();
+		connectedUserTxt.setWrapStyleWord(true);
+		connectedUserTxt.setFont(new Font("Modern No. 20", Font.PLAIN, 13));
+		connectedUserTxt.setLineWrap(true);
+		connectedUserTxt.setBackground(SystemColor.controlHighlight);
+		connectedUserTxt.setEditable(false);
+		connectedUserTxt.setBounds(784, 32, 200, 383);
+		contentPane.add(connectedUserTxt);
+		
+		lblConUsers = new JLabel("Connected Users");
+		lblConUsers.setBounds(848, 7, 89, 14);
+		contentPane.add(lblConUsers);
 		setFocusTraversalPolicy(new FocusTraversalOnArray(new Component[]{textChatField, btnSend}));
 		textChatField.addKeyListener(new KeyAdapter() {
 			@Override
