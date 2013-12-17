@@ -1,19 +1,21 @@
-package ServerSide;
+package kokushozero.serverside;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Date;
 
-/*
- * Single instance of Network Chat Server.
+/**
+ * Server instance. Contains all code to operate a Single chat server.
+ * @author Kokushozero
+ *
  */
 public class Server implements Runnable{
 
@@ -26,7 +28,12 @@ public class Server implements Runnable{
 	private ByteArrayInputStream byteInStream;
 	private DatagramSocket udpPing;
 	private ServerRNG rng;
+	private Date date;
 	
+	/**
+	 * Default constructor. Port parameter passed from MasterServer class
+	 * @param int port
+	 */
 	public Server(int port){
 		rng = new ServerRNG();
 		this.port = port;
@@ -35,7 +42,7 @@ public class Server implements Runnable{
 			socket = new DatagramSocket(port);
 			sendSocket = new DatagramSocket();
 		} catch (Exception e) {
-			System.out.println(e.getMessage());
+			System.out.println(date.toString()+": "+ e.getMessage());
 			e.printStackTrace();
 		}
 		run = new Thread(this, "Server");
@@ -55,7 +62,7 @@ public class Server implements Runnable{
 				try {
 					udpPing = new DatagramSocket();									
 				} catch (Exception e1) {
-					System.out.println(e1.getMessage());
+					System.out.println(date.toString()+": "+e1.getMessage());
 					e1.printStackTrace();
 				}
 											
@@ -66,7 +73,7 @@ public class Server implements Runnable{
 					try {
 						Thread.sleep(1000);
 					} catch (InterruptedException e1) {
-						System.out.println(e1.getMessage());
+						System.out.println(date.toString()+": "+e1.getMessage());
 						e1.printStackTrace();
 					}
 					
@@ -85,12 +92,11 @@ public class Server implements Runnable{
 						} catch (SocketTimeoutException e) {
 							evaluateID = false;
 							
-							// Will allow no reply from client 5 times before evicting them from the client list to ameliorate errors from packet loss via UDP.
+							// Will allow no reply from client 3 times before evicting them from the client list to ameliorate errors from packet loss via UDP.
 							userList.get(i).setPingsFailed(userList.get(i).getPingsFailed()+1);
-							System.out.println("\nNo repsonse from "+userList.get(i).getUserName());
-							if (userList.get(i).getPingsFailed() > 4 && userList.get(i).active){
-								System.out.println("\n"+e.getMessage());
-								System.out.println(userList.get(i).getUserName()+" has disconnected"+"\n");
+							if (userList.get(i).getPingsFailed() > 2 && userList.get(i).active){
+								System.out.println("\n"+date.toString()+": "+e.getMessage());
+								System.out.println(date.toString()+": "+userList.get(i).getUserName()+" has disconnected"+"\n");
 								sendToClients(userList.get(i).getUserName()+" has disconnected");
 								userList.get(i).setActive(false);
 								userList.get(i).setPingsFailed(0);
@@ -102,13 +108,13 @@ public class Server implements Runnable{
 								
 								// if still no response after 20 ticks, remove the User from userList.
 								if (userList.get(i).getTimeDead() > 20){
-									System.out.println("removing "+userList.get(i).getUserName()+" from userList"+"\n");
+									System.out.println(date.toString()+": "+"removing "+userList.get(i).getUserName()+" from userList"+"\n");
 									userList.remove(i);
 									break;
 								}
 							}
 						} catch (Exception e1){
-							System.out.println(e1.getMessage());
+							System.out.println(date.toString()+": "+e1.getMessage());
 							e1.printStackTrace();
 							break;
 						}						
@@ -116,8 +122,8 @@ public class Server implements Runnable{
 						// All successful acknowledgements from client are set to be evaluated. If User instance matches but ID is different (two computers on the same lan
 						// with the same port numbers).
 						if (!responseFromClient.equals(expectedResponse) && userList.get(i).active == true && evaluateID){
-							System.out.println("Clients unique ID does not match their IP and port number registration");
-							System.out.println(userList.get(i).getUserName()+" has disconnected"+"\n");
+							System.out.println(date.toString()+": "+"Clients unique ID does not match their IP and port number registration");
+							System.out.println(date.toString()+": "+userList.get(i).getUserName()+" has disconnected"+"\n");
 							userList.get(i).setActive(false);
 							sendToClients(userList.get(i).getUserName()+" has disconnected");
 						}
@@ -183,7 +189,7 @@ public class Server implements Runnable{
 					}
 					socket.close();
 				} catch (Exception e) {
-					System.out.println(e.getMessage());
+					System.out.println(date.toString()+": "+e.getMessage());
 					e.printStackTrace();
 				}
 
@@ -195,9 +201,10 @@ public class Server implements Runnable{
 		users.start();
 	}
 
-	/*
-	 * Once the client has been registered and given a unique id, the id is sent to the client as a string to be 
+	/**
+	 * Once the client has been registered and given a unique id, the id is sent to the client as a string to be
 	 * decoded by the client.
+	 * @param kokushozero.serverside.User user
 	 */
 	private void sendClientID(User user){
 		
@@ -207,14 +214,14 @@ public class Server implements Runnable{
 		try {
 			sendSocket.send(packet);
 		} catch (Exception e) {
-			System.out.println(e.getMessage());
+			System.out.println(date.toString()+": "+e.getMessage());
 			e.printStackTrace();
 		}
 	}
-	
-	/*
-	 * Sends string message to all clients in the userList ArrayList of connected clients. Prefixes string with "txt" so client
-	 * is aware this is a public message.
+			
+	/**
+	 * Sends string message to all active clients in the userList ArrayList of connected clients.
+	 * @param String message
 	 */
 	private void sendToClients(String message){
 
@@ -228,13 +235,16 @@ public class Server implements Runnable{
 				try {
 					sendSocket.send(packet);
 				} catch (Exception e) {
-					System.out.println(e.getMessage());
+					System.out.println(date.toString()+": "+e.getMessage());
 					e.printStackTrace();
 				}
 			}
 		}
 	}
 
+	/**
+	 * Sends an ArrayList<String> object to all active clients containing a list of connected user's usernames.
+	 */
 	private void sentToClientsUserlist(){
 		userListSend = new Thread("userListSend"){
 			public void run(){
@@ -242,7 +252,7 @@ public class Server implements Runnable{
 				try {
 					userListSocket = new DatagramSocket();
 				} catch (SocketException e1) {
-					System.out.println(e1.getMessage());
+					System.out.println(date.toString()+": "+e1.getMessage());
 					e1.printStackTrace();
 				}
 
@@ -252,7 +262,7 @@ public class Server implements Runnable{
 					try {
 						Thread.sleep(2000);
 					} catch (InterruptedException e) {
-						System.out.println(e.getMessage());
+						System.out.println(date.toString()+": "+e.getMessage());
 						e.printStackTrace();
 					}
 
@@ -295,14 +305,14 @@ public class Server implements Runnable{
 							try {
 								userListSocket.send(packet);
 							} catch (IOException e) {
-								System.out.println(e.getMessage());
+								System.out.println(date.toString()+": "+e.getMessage());
 								e.printStackTrace();
 							}
 						}
 						objOutstream.close();
 						outstream.close();					
 					} catch (Exception e) {
-						System.out.println(e.getMessage());
+						System.out.println(date.toString()+": "+e.getMessage());
 						e.printStackTrace();
 					}
 
@@ -313,8 +323,9 @@ public class Server implements Runnable{
 		userListSend.start();
 	}
 	
-	/*
-	 * Listens for new message transmissions from clients
+	/**
+	 * Starts a "Listen" thread which listens for incoming packet communications from clients.
+	 * Determines whether packet is either chat message or username request.
 	 */
 	private void listen(){
 		listen = new Thread("Listen"){
@@ -327,19 +338,19 @@ public class Server implements Runnable{
 					try {
 						socket.receive(packet);
 					} catch (IOException e) {
-						System.out.println(e.getMessage());
+						System.out.println(date.toString()+": "+e.getMessage());
 						e.printStackTrace();
 					}
 					String message = new String((packet.getData()));
-					System.out.println(message);
+					System.out.println(date.toString()+": "+message);
 					
 					if (message.substring(0, 3).equals("chk")){
-						System.out.println("Received username availability check... client asking for :"+message.substring(3, message.length()));
+						System.out.println(date.toString()+": "+"Received username availability check... client asking for :"+message.substring(3, message.length()));
 						boolean isAvailable = checkUsernameAvail(message.substring(3,message.length()));
 						try {
 							Thread.sleep(2000);
 						} catch (InterruptedException e1) {
-							// TODO Auto-generated catch block
+							System.out.println(date.toString()+": "+e1.getMessage());
 							e1.printStackTrace();
 						}
 						if (isAvailable){
@@ -349,7 +360,7 @@ public class Server implements Runnable{
 							try {
 								socket.send(response);
 							} catch (IOException e) {
-								System.out.println(e.getMessage());
+								System.out.println(date.toString()+": "+e.getMessage());
 								e.printStackTrace();
 							}
 						}
@@ -360,7 +371,7 @@ public class Server implements Runnable{
 							try {
 								socket.send(response);
 							} catch (IOException e) {
-								System.out.println(e.getMessage());
+								System.out.println(date.toString()+": "+e.getMessage());
 								e.printStackTrace();
 							}
 						}
@@ -374,31 +385,37 @@ public class Server implements Runnable{
 		listen.start();
 	}
 
+	/**
+	 * Checks to see whether the requested username string has already been taken by another Client user.
+	 * String is case insensitive. Returns boolean response to query.
+	 * @param String string
+	 * @return boolean
+	 */
 	private boolean checkUsernameAvail(String string){
 		string = string.trim();
-		System.out.println("\nchecking to see if "+string+" is already taken.");
+		System.out.println("\n"+date.toString()+": "+"checking to see if "+string+" is already taken.");
 		for (int i = 0; i < userList.size(); i++){
 			if (userList.get(i).getUserName().equalsIgnoreCase(string)){
-				System.out.println(string+" is already in service."+"\n");
+				System.out.println(date.toString()+": "+string+" is already in service."+"\n");
 				return false;
 			}
 		}
-		System.out.println(string+" is available."+"\n");
+		System.out.println(date.toString()+": "+string+" is available."+"\n");
 		return true;
 	}
 	
-
-	@Override
+	/**
+	 * Main runnable thread. Is executed automatically from constructor.
+	 */
+	@Override	
 	public void run() {
 		this.ServerRunning = true;
-		System.out.println("Server running on port "+this.port);
+		date = new Date();
+		System.out.println(date.toString()+": "+"Server running on port "+this.port);
 		manageUsers();
 		listen();
 		checkWhoIsStillAlive();
 		sentToClientsUserlist();
 	}
-
-
-
 
 }

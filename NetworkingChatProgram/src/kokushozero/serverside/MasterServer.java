@@ -1,18 +1,28 @@
-package ServerSide;
-/*
- * Run through command line with a single parameter of application port. Code can be altered to run multiple servers if required.
+package kokushozero.serverside;
+
+/**
+ * Main runnable server instantiator. Allows multiple servers to be started simultaneously on any number of pre-defined ports.
+ * @author Kokushozero
+ *
  */
 public class MasterServer {
 
 	private Server server;
 	
-	
+	/**
+	 * Default constructor
+	 * @param int port
+	 */
 	public MasterServer(int port){
 		
 		server = new Server(port);
 		
 	}
 	
+	/**
+	 * Run this class with individual string arguments representing a port number for each server instance intended to be run.
+	 * @param String args
+	 */
 	public static void main(String[] args) {
 		
 		if (args.length == 0){

@@ -1,16 +1,13 @@
-import java.awt.BorderLayout;
-import java.awt.EventQueue;
+package kokushozero.clientside;
 
+import java.awt.EventQueue;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
-import javax.swing.SwingConstants;
 import javax.swing.JButton;
 import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
-
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
@@ -18,10 +15,13 @@ import java.awt.event.KeyEvent;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 
-
+/**
+ * GUI application which retrieves server login parameters from the user. Once acceptable parameters are entered
+ * a Client instance is created and the Login instance is destroyed.
+ * @author Kokushozero
+ *
+ */
 public class Login extends JFrame {
 
 	private JPanel contentPane;
@@ -37,6 +37,11 @@ public class Login extends JFrame {
 	private InetAddress userIP;
 	private String errorMsg;
 	
+	/**
+	 * Confirms server and username availability.
+	 * @param INetAddress ipAddress
+	 * @return boolean
+	 */
 	private boolean openConnection(String ipAddress){
 		
 		try {
@@ -67,7 +72,9 @@ public class Login extends JFrame {
 		
 	}
 
-	
+	/**
+	 * Retrieves all user entered data and validates it. If data is acceptable a Client instance is created.
+	 */
 	private void userLogin(){
 		errorMsg = "";
 		if (txtUsername.getText().length() == 0 || txtIpaddress.getText().length() == 0 || txtPort.getText().length() == 0){

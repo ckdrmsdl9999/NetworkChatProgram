@@ -1,11 +1,11 @@
-import java.awt.EventQueue;
+package kokushozero.clientside;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -15,10 +15,8 @@ import java.util.ArrayList;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
-import javax.swing.text.DefaultCaret;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextPane;
 import javax.swing.JButton;
 import javax.swing.JTextField;
 import javax.swing.UIManager;
@@ -30,7 +28,7 @@ import java.awt.event.KeyEvent;
 
 import org.eclipse.wb.swing.FocusTraversalOnArray;
 
-import ServerSide.User;
+import kokushozero.serverside.User;
 
 import java.awt.Component;
 
@@ -39,7 +37,11 @@ import javax.swing.JLabel;
 import java.awt.SystemColor;
 import java.awt.Font;
 
-
+/**
+ * Main chat client GUI and client side logic for chat server.
+ * @author Kokushozero
+ *
+ */
 public class Client extends JFrame {
 
 	private JPanel contentPane;
@@ -85,19 +87,29 @@ public class Client extends JFrame {
 		}
 	}
 	
-	
+	/**
+	 * Posts string to the main JTextArea for the user to see.
+	 * @param String message
+	 */
 	private void postToConsole(String message){	
 		
 		textHistory.append(message+"\n");
 		textHistory.setCaretPosition(textHistory.getDocument().getLength());
 	}
 	
+	/**
+	 * Posts user typed string to server, then deletes written text from user input text-box.
+	 * @param String message
+	 */
 	private void post(String message){
 		postToServer(userName+": "+message);
 		textChatField.setText("");
 		textChatField.requestFocusInWindow();
 	}
 	
+	/**
+	 * Main method of receiving data from server. Data is analysed and processed depending on its content.
+	 */
 	private void receive(){
 		
 		byte[] payload = new byte[1024];
@@ -130,13 +142,19 @@ public class Client extends JFrame {
 		
 	}
 	
+	/**
+	 * Method is called upon receipt of a userList sync message from server. Populates the userList JTextArea with 
+	 * the current connected userList.
+	 * @param byte[] data
+	 */
 	private void populateUserList(byte[] data){
 		
 		int stringArrayLength = "uli".getBytes().length;
 		byte[] objectData = new byte[data.length - stringArrayLength];
 		int incrementCounter = 0;
-		for (int i = stringArrayLength; i < data.length; i++){
-			//TODO remove 3 char string from array
+		
+		// removes prefixed string from byte array to isolate object data.
+		for (int i = stringArrayLength; i < data.length; i++){			
 			objectData[incrementCounter++] = data[i];
 		}
 		
@@ -160,6 +178,10 @@ public class Client extends JFrame {
 		
 	}
 	
+	/**
+	 * Sends string to server to be sent to all connected clients.
+	 * @param String message
+	 */
 	private void postToServer(String message){
 		
 		byte[] payload = message.getBytes();
@@ -172,12 +194,16 @@ public class Client extends JFrame {
 		}
 	}
 	
+	/**
+	 * Returns the client's assigned Unique ID number in String format.
+	 * @return String uniqueID
+	 */
 	private String getUniqueID(){
 		return this.uniqueID;
 	}
 	
-	/*
-	 * Responds to server inquiries to ensure server remains aware of client.
+	/**
+	 * Responds to server packet enquiries to ensure server remains aware of client.
 	 */
 	private void isAlive(){
 		Thread thread = new Thread("isAlive"){
@@ -212,8 +238,8 @@ public class Client extends JFrame {
 		
 	}
 	
-	/*
-	 * Thread listens for new messages from the server and posts them to the textpane in the GUI
+	/**
+	 * Main loop thread for receiving new packets from server.
 	 */
 	private void listen(){
 		Thread thread = new Thread("Listen"){
@@ -229,6 +255,15 @@ public class Client extends JFrame {
 		
 	}
 	
+	/**
+	 * Default constructor, parameters are populated from Login instance.
+	 * @param INetAddress ip
+	 * @param DatagramSocket socket
+	 * @param String username
+	 * @param int port
+	 * @param int userPort
+	 * @param InetAddress userIP
+	 */
 	public Client(InetAddress ip, DatagramSocket socket, String username, int port, int userPort, InetAddress userIP) {
 		setResizable(false);
 		

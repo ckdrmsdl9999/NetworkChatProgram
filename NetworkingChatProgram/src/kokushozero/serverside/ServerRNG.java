@@ -1,4 +1,4 @@
-package ServerSide;
+package kokushozero.serverside;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -15,6 +15,9 @@ public class ServerRNG {
 	private ArrayList<String> numberPool;
 	private Random rng;
 	
+	/**
+	 * Default constructor
+	 */
 	public ServerRNG(){
 		
 		numberPool = new ArrayList<String>();
@@ -25,6 +28,10 @@ public class ServerRNG {
 		}
 	}
 	
+	/**
+	 * Removes a random number from the number pool and returns it.
+	 * @return int
+	 */
 	public String getNumber(){
 		
 		int randomNum = rng.nextInt(numberPool.size());
